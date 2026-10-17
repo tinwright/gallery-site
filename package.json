@@ -1,0 +1,19 @@
+{
+  "name": "tinwright.github.io",
+  "private": true,
+  "type": "module",
+  "description": "The tinwright gallery: every workshop and its tools, in one place.",
+  "license": "MIT",
+  "scripts": {
+    "check": "node scripts/check.mjs",
+    "test": "node --test \"scripts/*.test.mjs\"",
+    "build": "node scripts/build-gallery.mjs",
+    "dev": "npm run build && node scripts/serve.mjs dist"
+  },
+  "devDependencies": {
+    "marked": "18.1.0"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
