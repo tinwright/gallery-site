@@ -20,5 +20,7 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      # The site test builds every workshop, from clones in .workshops/.
+      - run: npm run workshops
       - run: npm run check
       - run: npm test

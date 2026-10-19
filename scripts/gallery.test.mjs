@@ -1,43 +1,83 @@
-// The gallery builds in every language from the workshops' items.json, links each tool to its
-// page on its workshop's site, and lists a workshop with no published site without failing.
+// The gallery lists every workshop, linking each tool into that workshop's part of the site, and
+// lists a workshop it couldn't build without failing. A workshop's own nouns and hooks (from its
+// scripts/site.mjs) show on its pages.
 
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import fs from 'node:fs';
-import path from 'node:path';
 import { test } from 'node:test';
-import { ROOT_DIR } from './items.mjs';
+import { renderDetail, renderGallery, renderHome } from './page.js';
+import config from '../site.config.js';
 
-const DIST = path.join(ROOT_DIR, 'dist');
-const read = (/** @type {string} */ file) => fs.readFileSync(path.join(DIST, file), 'utf8');
+/** @type {import('./items.mjs').Item} */
+const ITEM = {
+  name: 'tool',
+  dir: '',
+  title: 'Tool',
+  readmes: { en: '# Tool\n\nDoes one thing.\n' },
+  descriptions: { en: 'Does one thing.', fr: 'Fait une chose.' },
+  hasScreenshot: false,
+  sourceUrl: 'https://github.com/tinwright/workshop/tree/main/tools/tool',
+};
 
-test('builds from the fixtures', () => {
-  const build = spawnSync(process.execPath, ['scripts/build-gallery.mjs'], {
-    cwd: ROOT_DIR,
-    encoding: 'utf8',
-    env: { ...process.env, GALLERY_LOCAL: path.join(ROOT_DIR, 'test', 'fixtures') },
-  });
-  assert.equal(build.status, 0, build.stderr);
+test("each tool links to its page in its workshop's part of the site", () => {
+  const html = renderGallery(config, [
+    {
+      title: 'workshop',
+      tagline: 'Tools for things',
+      url: '../workshop/fr/',
+      repoUrl: 'https://github.com/tinwright/workshop',
+      items: [{ ...ITEM, href: '../workshop/fr/tools/tool/', kicker: 'workshop' }],
+    },
+  ], 'fr');
+  assert.match(html, /href="\.\.\/workshop\/fr\/tools\/tool\/"/);
+  assert.match(html, /href="\.\.\/workshop\/fr\/">Voir workshop</);
+  assert.match(html, /Fait une chose\./);
 });
 
-test('each tool links to its page on its workshop site, in the same language', () => {
-  assert.match(read('index.html'), /href="https:\/\/tinwright\.github\.io\/ai-apprentice\/plugins\/example\/"/);
-  assert.match(read('fr/index.html'), /href="https:\/\/tinwright\.github\.io\/ai-apprentice\/fr\/plugins\/example\/"/);
-  assert.match(read('es/index.html'), /Plugins, skills y mods para Claude Code/);
+test("a workshop the build couldn't find is listed without tools, linking to its repo", () => {
+  const html = renderGallery(config, [
+    { title: 'app-lanterns', tagline: '', repoUrl: 'https://github.com/tinwright/app-lanterns', items: [] },
+  ]);
+  assert.match(html, /<h2 id="workshop-0">app-lanterns<\/h2>/);
+  assert.match(html, /<div class="empty"><p>Its first tools are on their way\.<\/p><\/div>/);
+  assert.match(html, /href="https:\/\/github\.com\/tinwright\/app-lanterns"/);
 });
 
-test('a workshop without a published site is listed, without tools', () => {
-  const home = read('index.html');
-  assert.match(home, /<h2 id="workshop-4">app-lanterns<\/h2>/);
-  assert.match(home, /Its first tools are on their way\./);
-  assert.match(home, /href="https:\/\/github\.com\/tinwright\/app-lanterns"/);
+test("a workshop's nouns and hooks show on its pages", () => {
+  /** @type {import('./page.js').Site} */
+  const site = {
+    title: 'workshop',
+    tagline: 'Tools for things',
+    languages: ['en', 'fr', 'es'],
+    repoUrl: 'https://github.com/tinwright/workshop',
+    itemsDir: 'tools',
+    workshop: {
+      nouns: { en: { allItems: 'All widgets', count: (/** @type {number} */ n) => `${n} widgets`, item: 'Widget' } },
+      kicker: () => 'Gadget',
+      card: (_site, item, _ctx, kit) => `<p class="card-command">${kit.escapeHTML(`<${item.name}>`)}</p>`,
+      facts: () => '<dt>Size</dt><dd>Small</dd>',
+      install: (_site, item, ctx, kit) => kit.commandHTML(ctx.lang, `install ${item.name}`),
+    },
+  };
+  const home = renderHome(site, [ITEM]);
+  assert.match(home, /All widgets/);
+  assert.match(home, /1 widgets/);
+  assert.match(home, /&lt;tool&gt;/);
+  const detail = renderDetail(site, ITEM, [ITEM]);
+  assert.match(detail, /<p class="kicker">Gadget<\/p>/);
+  assert.match(detail, /<dt>Size<\/dt><dd>Small<\/dd>/);
+  assert.match(detail, /install tool/);
+  // A language the workshop has no nouns for falls back to its English ones.
+  assert.match(renderHome(site, [ITEM], 'fr'), /All widgets/);
 });
 
-test('the only links inside the site lead to pages that exist', () => {
-  for (const file of ['index.html', 'fr/index.html', 'es/index.html'])
-    for (const [, value] of read(file).matchAll(/\shref="([^"]*)"/g)) {
-      if (/^(https?:|mailto:|#|data:)/.test(value)) continue;
-      const target = path.resolve(path.dirname(path.join(DIST, file)), value);
-      assert.ok(fs.existsSync(path.join(target, 'index.html')) || fs.existsSync(target), `${file}: ${value}`);
-    }
+test('home pages end with an About section, linking a workshop back to the gallery', () => {
+  const gallery = renderGallery(config, [], 'fr');
+  assert.match(gallery, /<h2 id="about-title">À propos de tinwright<\/h2>/);
+  assert.match(gallery, /href="https:\/\/github\.com\/tinwright">tinwright sur GitHub</);
+  /** @type {import('./page.js').Site} */
+  const site = { title: 'workshop', tagline: '', languages: ['en', 'fr'], repoUrl: '', itemsDir: 'tools', workshop: {} };
+  assert.match(renderHome(site, [ITEM]), /href="\.\.\/">See every workshop</);
+  assert.match(renderHome(site, [ITEM], 'fr'), /href="\.\.\/\.\.\/fr\/">Voir tous les ateliers</);
+  // A workshop page rendered on its own has nowhere to link back to.
+  assert.doesNotMatch(renderHome({ ...site, workshop: undefined }, [ITEM]), /See every workshop/);
 });

@@ -21,8 +21,9 @@ export const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)
  *   href?: string,
  *   screenshotUrl?: string,
  *   kicker?: string,
- * }} Item In the gallery, a tool from a workshop's items.json: `href` is its page on that workshop's
- *   site, `screenshotUrl` its screenshot there, and `kicker` the workshop's name. `readmes` and `descriptions` are keyed by language, holding only the languages the item
+ *   authors?: import('./authors.mjs').Author[],
+ * }} Item On the gallery's home page, `href` is a tool's page in its workshop's part of the site,
+ *   `screenshotUrl` its screenshot there, and `kicker` the workshop's name. `readmes` and `descriptions` are keyed by language, holding only the languages the item
  *   has a README for.
  *
  * @typedef {SiteText & {

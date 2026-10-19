@@ -1,22 +1,22 @@
 # tinwright.github.io
 
-The [tinwright](https://github.com/tinwright) gallery, at https://tinwright.github.io: every
-workshop and the tools in it, in English, French and Spanish.
+The [tinwright](https://github.com/tinwright) site, at https://tinwright.github.io: the gallery of
+every workshop, and each workshop's own pages under it (`/ai-apprentice/`, `/cli-toolroll/`...), in
+English, French and Spanish.
 
-It has no tools of its own. Each workshop's catalog site publishes an `items.json`, and the gallery
-reads them all at build time, every day and on every push, linking each tool to its page on its
-workshop's site.
+It has no tools of its own. It builds the whole site from a checkout of each workshop: the tools'
+READMEs, screenshots and authors, plus each workshop's `scripts/site.mjs` for its nouns and install
+steps. GitHub Pages rebuilds it on every push here, every hour, and from the **Run workflow** button
+on the Actions tab.
 
 ```sh
 npm install
-npm test                                  # builds from the fixtures in test/fixtures
-GALLERY_LOCAL=~/tinwright npm run dev     # preview with your local workshops (build each one first)
-npm run dev                               # preview with the published workshops
+npm test        # builds the site from the workshops next to this repo (~/tinwright/<repo>)
+npm run dev     # the same, then serves it at http://localhost:3000
 ```
 
-Add a workshop to `workshops` in [`site.config.js`](site.config.js). The page shell in
-`scripts/page.js` is the workshops' own, with `renderGallery` added, so the sites look like
-siblings.
+Without the workshops next to it, `npm run workshops` clones them into `.workshops/` first, as CI
+does. To add a workshop, add it to `workshops` in [`site.config.js`](site.config.js).
 
 ## Licence
 

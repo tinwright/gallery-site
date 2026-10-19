@@ -20,12 +20,13 @@ export default {
   branch: 'main',
   // No tools of its own; the workshops below hold them.
   itemsDir: 'workshops',
-  // Each workshop's site publishes items.json, which the gallery reads at build time.
+  // The workshops whose tools the site shows, in this order, each built into <repo>/ from a
+  // checkout of its repo (see scripts/workshops.mjs).
   workshops: [
-    { repo: 'ai-apprentice', siteUrl: 'https://tinwright.github.io/ai-apprentice' },
-    { repo: 'browser-trinkets', siteUrl: 'https://tinwright.github.io/browser-trinkets' },
-    { repo: 'bookmarklet-tacks', siteUrl: 'https://tinwright.github.io/bookmarklet-tacks' },
-    { repo: 'cli-toolroll', siteUrl: 'https://tinwright.github.io/cli-toolroll' },
-    { repo: 'app-lanterns', siteUrl: 'https://tinwright.github.io/app-lanterns' },
+    { repo: 'ai-apprentice' },
+    { repo: 'browser-trinkets' },
+    { repo: 'bookmarklet-tacks' },
+    { repo: 'cli-toolroll' },
+    { repo: 'app-lanterns' },
   ],
 };

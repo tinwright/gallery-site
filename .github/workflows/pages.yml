@@ -3,10 +3,11 @@ name: Site
 on:
   push:
     branches: [main]
+  # The "Run workflow" button on the Actions tab, to rebuild now.
   workflow_dispatch:
-  # Daily, so new tools in the workshops appear without a change here.
+  # Hourly, so changes in the workshops reach the site without a change here.
   schedule:
-    - cron: "17 6 * * *"
+    - cron: "17 * * * *"
 
 permissions:
   contents: read
@@ -19,8 +20,8 @@ concurrency:
 
 jobs:
   build:
-    # GitHub Pages needs a public repository on the Free plan; until then, check.yml still builds
-    # and tests the site on every change.
+    # GitHub Pages needs a public repository on the Free plan. The build also clones the workshops
+    # over HTTPS without a token, so they need to be public too, here and in check.yml.
     if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     steps:
@@ -32,7 +33,12 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      # Clones every workshop into .workshops/, which the build reads them from.
+      - run: npm run workshops
       - run: npm run build
+        env:
+          # Lets scripts/authors.mjs ask the GitHub API who made each tool.
+          GITHUB_TOKEN: ${{ github.token }}
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: dist

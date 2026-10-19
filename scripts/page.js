@@ -3,7 +3,17 @@ import { isLanguageLinks, languagesOf, plainText } from './items.mjs';
 
 /**
  * @typedef {import('./items.mjs').Item} Item
- * @typedef {import('./items.mjs').SiteConfig & { hasFavicons?: boolean }} Site
+ * @typedef {import('./items.mjs').SiteConfig & { hasFavicons?: boolean, workshop?: WorkshopSite }} Site
+ *
+ * A workshop's scripts/site.mjs: its nouns, and what its pages add. Each hook gets KIT, the helpers
+ * below, and returns HTML; escape anything from the repo with kit.escapeHTML().
+ * @typedef {{
+ *   nouns?: Record<string, Record<string, any>>,
+ *   kicker?: (item: Item, lang: Lang) => string | undefined,
+ *   card?: (site: Site, item: Item, ctx: Ctx, kit: typeof KIT) => string,
+ *   facts?: (site: Site, item: Item, ctx: Ctx, kit: typeof KIT) => string,
+ *   install?: (site: Site, item: Item, ctx: Ctx, kit: typeof KIT) => string,
+ * }} WorkshopSite
  *
  * A language code from site.config.js `languages`, with its strings in STRINGS.
  * @typedef {string} Lang
@@ -14,8 +24,9 @@ import { isLanguageLinks, languagesOf, plainText } from './items.mjs';
 
 /**
  * The site's own text, one set per language. `name` is the language's own name, shown in the
- * language switch. Rename "item" to your noun in every language. To add a language, add a set
- * here and its code to site.config.js `languages`; the build stops on a language with no set.
+ * language switch. On a workshop's pages, the nouns (item, allItems, count, back, moreItems and
+ * the empty state) come from that workshop's scripts/site.mjs `nouns` instead. To add a language,
+ * add a set here, and nouns in every workshop; the build stops on a language with no set.
  */
 const STRINGS = {
   en: {
@@ -26,6 +37,16 @@ const STRINGS = {
     item: 'Tool',
     allItems: 'All tools',
     count: (/** @type {number} */ n) => `${n} ${n === 1 ? 'tool' : 'tools'}`,
+    emptyTitle: 'No tools yet',
+    emptyText: 'The first ones are on their way. Watch the repository on GitHub to hear when they land.',
+    emptyAction: 'Watch on GitHub',
+    authors: 'Authors',
+    authorCount: (/** @type {number} */ n) => `${n} ${n === 1 ? 'author' : 'authors'}`,
+    authorsOf: (/** @type {string} */ title) => `Who made ${title}`,
+    authorsLede: (/** @type {string} */ title) => `Everyone whose commits shaped ${title}, most commits first.`,
+    madeBy: (/** @type {string[]} */ [first, second, ...rest]) =>
+      `Made by ${first}${rest.length ? ` and ${rest.length + 1} others` : second ? ` and ${second}` : ''}`,
+    commitCount: (/** @type {number} */ n) => `${n} ${n === 1 ? 'commit' : 'commits'}`,
     back: '← All tools',
     atAGlance: 'At a glance',
     viewSource: 'View source',
@@ -38,6 +59,13 @@ const STRINGS = {
     untranslated: 'This guide isn\'t translated into English yet. Here is the original version.',
     license: (/** @type {string} */ name) => `Open source, ${name} licence`,
     reportIssue: 'Report an issue',
+    aboutTitle: 'About tinwright',
+    about: [
+      'Small, free, open-source tools, made the way a tinwright made pots and lanterns: one at a time, by hand, to do one job well.',
+      'Each kind of tool has its own workshop: a repository with real tests, and a guide that teaches Claude to build the next tool in a sitting. Every tool collects no data and asks for as few permissions as it can.',
+    ],
+    allWorkshops: 'See every workshop',
+    onGitHub: 'tinwright on GitHub',
   },
   fr: {
     htmlLang: 'fr',
@@ -47,6 +75,16 @@ const STRINGS = {
     item: 'Outil',
     allItems: 'Tous les outils',
     count: (/** @type {number} */ n) => `${n} ${n === 1 ? 'outil' : 'outils'}`,
+    emptyTitle: 'Pas encore d’outils',
+    emptyText: 'Les premiers arrivent bientôt. Suivez le dépôt sur GitHub pour savoir quand ils seront là.',
+    emptyAction: 'Suivre sur GitHub',
+    authors: 'Auteurs',
+    authorCount: (/** @type {number} */ n) => `${n} ${n === 1 ? 'auteur' : 'auteurs'}`,
+    authorsOf: (/** @type {string} */ title) => `Qui a fait ${title}`,
+    authorsLede: (/** @type {string} */ title) => `Toutes les personnes dont les commits ont façonné ${title}, de la plus active à la moins active.`,
+    madeBy: (/** @type {string[]} */ [first, second, ...rest]) =>
+      `Fait par ${first}${rest.length ? ` et ${rest.length + 1} autres` : second ? ` et ${second}` : ''}`,
+    commitCount: (/** @type {number} */ n) => `${n} ${n === 1 ? 'commit' : 'commits'}`,
     back: '← Tous les outils',
     atAGlance: 'En bref',
     viewSource: 'Voir le code source',
@@ -59,6 +97,13 @@ const STRINGS = {
     untranslated: "Ce guide n'est pas encore traduit en français. Voici la version d'origine.",
     license: (/** @type {string} */ name) => `Open source, licence ${name}`,
     reportIssue: 'Signaler un problème',
+    aboutTitle: 'À propos de tinwright',
+    about: [
+      'De petits outils gratuits et open source, faits comme un ferblantier faisait ses pots et ses lanternes : un à la fois, à la main, pour bien faire une chose.',
+      'Chaque type d’outil a son atelier : un dépôt avec de vrais tests et un guide qui apprend à Claude à fabriquer l’outil suivant en une séance. Aucun outil ne collecte de données, et chacun demande aussi peu d’autorisations que possible.',
+    ],
+    allWorkshops: 'Voir tous les ateliers',
+    onGitHub: 'tinwright sur GitHub',
   },
   es: {
     htmlLang: 'es',
@@ -68,6 +113,16 @@ const STRINGS = {
     item: 'Herramienta',
     allItems: 'Todas las herramientas',
     count: (/** @type {number} */ n) => `${n} ${n === 1 ? 'herramienta' : 'herramientas'}`,
+    emptyTitle: 'Todavía no hay herramientas',
+    emptyText: 'Las primeras están en camino. Sigue el repositorio en GitHub para enterarte cuando lleguen.',
+    emptyAction: 'Seguir en GitHub',
+    authors: 'Autores',
+    authorCount: (/** @type {number} */ n) => `${n} ${n === 1 ? 'autor' : 'autores'}`,
+    authorsOf: (/** @type {string} */ title) => `Quién hizo ${title}`,
+    authorsLede: (/** @type {string} */ title) => `Todas las personas cuyos commits dieron forma a ${title}, de más a menos commits.`,
+    madeBy: (/** @type {string[]} */ [first, second, ...rest]) =>
+      `Hecho por ${first}${rest.length ? ` y ${rest.length + 1} más` : second ? ` y ${second}` : ''}`,
+    commitCount: (/** @type {number} */ n) => `${n} ${n === 1 ? 'commit' : 'commits'}`,
     back: '← Todas las herramientas',
     atAGlance: 'De un vistazo',
     viewSource: 'Ver el código fuente',
@@ -80,14 +135,27 @@ const STRINGS = {
     untranslated: 'Esta guía aún no está traducida al español. Esta es la versión original.',
     license: (/** @type {string} */ name) => `Código abierto, licencia ${name}`,
     reportIssue: 'Informar de un problema',
+    aboutTitle: 'Sobre tinwright',
+    about: [
+      'Pequeñas herramientas gratuitas y de código abierto, hechas como un hojalatero hacía sus ollas y faroles: una a una, a mano, para hacer bien una cosa.',
+      'Cada tipo de herramienta tiene su taller: un repositorio con pruebas de verdad y una guía que enseña a Claude a construir la siguiente herramienta de una sentada. Ninguna recopila datos, y cada una pide los menos permisos posibles.',
+    ],
+    allWorkshops: 'Ver todos los talleres',
+    onGitHub: 'tinwright en GitHub',
   },
 };
 
-/** The languages this file has strings for; build-site.mjs checks the config against it. */
+/** The languages this file has strings for; build-site.mjs checks each config against it. */
 export const SUPPORTED_LANGUAGES = Object.keys(STRINGS);
 
-/** @param {Lang} lang */
-const stringsOf = (lang) => STRINGS[/** @type {keyof typeof STRINGS} */ (lang)] ?? STRINGS.en;
+/**
+ * The strings in `lang`, with the nouns of the workshop whose pages these are.
+ * @param {Lang} lang @param {Site} [site]
+ */
+const stringsOf = (lang, site) => ({
+  ...(STRINGS[/** @type {keyof typeof STRINGS} */ (lang)] ?? STRINGS.en),
+  ...(site?.workshop?.nouns?.[lang] ?? site?.workshop?.nouns?.en),
+});
 
 /** @param {Site} site */
 const defaultLanguage = (site) => languagesOf(site)[0];
@@ -122,8 +190,7 @@ const rootOf = (site, lang, depth) =>
   '../'.repeat(depth + (lang === defaultLanguage(site) ? 0 : 1));
 
 // ---------------------------------------------------------------------------------------------
-// Extension points: the repo-specific bits (owners, tags, version, install steps...) go here.
-// Each returns HTML; escape anything that comes from the repo with escapeHTML().
+// Extension points: each workshop's scripts/site.mjs fills these in for its own pages.
 // ---------------------------------------------------------------------------------------------
 
 /** The gallery's own words, per language. */
@@ -151,51 +218,35 @@ const WORDS = {
 const wordsOf = (lang) => WORDS[/** @type {keyof typeof WORDS} */ (lang)] ?? WORDS.en;
 
 /**
- * The small label above a tool's title: the workshop it comes from.
+ * The small label above a tool's title: `kicker` from site.config.js, else the workshop's own
+ * (a plugin's category, an extension's browsers...), else the gallery's (the workshop's name), else
+ * its noun.
  * @param {Site} site
  * @param {Item} item
  * @param {Lang} lang
  */
-// eslint-disable-next-line no-unused-vars
 function kickerOf(site, item, lang) {
-  return item.kicker ?? stringsOf(lang).item;
+  const overrides = site.items?.[item.name];
+  return (
+    overrides?.translations?.[lang]?.kicker ||
+    overrides?.kicker ||
+    site.workshop?.kicker?.(item, lang) ||
+    item.kicker ||
+    stringsOf(lang, site).item
+  );
 }
 
-/**
- * Extra lines at the bottom of a home card.
- * @param {Site} site
- * @param {Item} item
- * @param {Ctx} ctx
- */
-// eslint-disable-next-line no-unused-vars
-function extraCardHTML(site, item, ctx) {
-  return '';
-}
+/** Extra lines at the bottom of a home card. @param {Site} site @param {Item} item @param {Ctx} ctx */
+const extraCardHTML = (site, item, ctx) => site.workshop?.card?.(site, item, ctx, KIT) ?? '';
 
-/**
- * The gallery has no detail pages: every card links to the tool's page on its workshop's site.
- * @param {Site} site
- * @param {Item} item
- * @param {Ctx} ctx
- */
-// eslint-disable-next-line no-unused-vars
-function factsHTML(site, item, ctx) {
-  return '';
-}
+/** `<dt>`/`<dd>` pairs for the "At a glance" box. @param {Site} site @param {Item} item @param {Ctx} ctx */
+const factsHTML = (site, item, ctx) => site.workshop?.facts?.(site, item, ctx, KIT) ?? '';
 
-/**
- * @param {Site} site
- * @param {Item} item
- * @param {Ctx} ctx
- */
-// eslint-disable-next-line no-unused-vars
-function extraDetailHTML(site, item, ctx) {
-  return '';
-}
+/** How to install or run the tool, in the "At a glance" box. @param {Site} site @param {Item} item @param {Ctx} ctx */
+const extraDetailHTML = (site, item, ctx) => site.workshop?.install?.(site, item, ctx, KIT) ?? '';
 
 // ---------------------------------------------------------------------------------------------
 
-/** @param {string} text */
 export const escapeHTML = (text) =>
   text.replace(
     /[&<>"']/g,
@@ -375,7 +426,19 @@ export function cardHTML(site, item, ctx, withMedia) {
       <h3 class="card-title"><a href="${href}">${escapeHTML(item.title)}</a></h3>
       ${description ? `<p class="card-text">${escapeHTML(description)}</p>` : ''}
       ${extraCardHTML(site, item, ctx)}
+      ${bylineHTML(item, href, ctx)}
     </li>`;
+}
+
+/**
+ * A card's quiet "Made by" line: the first author's avatar and login, linking to the tool's authors page.
+ * @param {Item} item @param {string} href the tool's page @param {Ctx} ctx
+ */
+function bylineHTML(item, href, ctx) {
+  const authors = item.authors ?? [];
+  if (!authors.length) return '';
+  const logins = authors.map((author) => `@${author.login}`);
+  return `<a class="byline" href="${href}authors/">${avatarHTML(authors[0], ctx, 20)}<span>${escapeHTML(stringsOf(ctx.lang).madeBy(logins))}</span></a>`;
 }
 
 /** @param {Site} site @param {Item[]} items @param {Ctx} ctx */
@@ -384,9 +447,44 @@ const gridHTML = (site, items, ctx) => {
   return `<ul class="grid">${items.map((item) => cardHTML(site, item, ctx, withMedia)).join('')}</ul>`;
 };
 
+/**
+ * What the home page shows before the first tool is listed.
+ * @param {Site} site @param {ReturnType<typeof stringsOf>} t
+ */
+const emptyHTML = (site, t) => `<div class="empty">
+          <p class="empty-title">${t.emptyTitle}</p>
+          <p>${t.emptyText}</p>
+          <a class="button button-secondary" href="${escapeHTML(site.repoUrl)}">${t.emptyAction}</a>
+        </div>`;
+
+/**
+ * The "About tinwright" section at the foot of a home page, with a link onward: to the gallery from
+ * a workshop built into the site, or to the tinwright org from the gallery.
+ * @param {Ctx} ctx @param {{ href: string, label: string }} [link]
+ */
+function aboutHTML(ctx, link) {
+  const t = stringsOf(ctx.lang);
+  return `<section class="about" aria-labelledby="about-title">
+        <div class="section-head"><h2 id="about-title">${t.aboutTitle}</h2></div>
+        ${t.about.map((paragraph) => `<p>${escapeHTML(paragraph)}</p>`).join('\n        ')}
+        ${link ? `<div class="actions"><a class="button button-secondary" href="${escapeHTML(link.href)}">${link.label}</a></div>` : ''}
+      </section>`;
+}
+
+/**
+ * A workshop built into the site (one with `workshop` hooks) sits one folder below the gallery,
+ * which has the same languages.
+ * @param {Site} site @param {Ctx} ctx
+ */
+const galleryLink = (site, ctx) =>
+  site.workshop && {
+    href: `${ctx.root}../${ctx.lang === defaultLanguage(site) ? '' : `${ctx.lang}/`}`,
+    label: stringsOf(ctx.lang).allWorkshops,
+  };
+
 /** @param {Site} site @param {Item[]} items @param {Lang} [lang] */
 export function renderHome(site, items, lang = defaultLanguage(site)) {
-  const t = stringsOf(lang);
+  const t = stringsOf(lang, site);
   const ctx = { lang, root: rootOf(site, lang, 0), home: '' };
   const intro = siteText(site, lang, 'intro');
   return layout(site, ctx, {
@@ -402,23 +500,84 @@ export function renderHome(site, items, lang = defaultLanguage(site)) {
       <section aria-labelledby="all-title">
         <div class="section-head">
           <h2 id="all-title">${t.allItems}</h2>
-          <p>${t.count(items.length)}</p>
+          ${items.length ? `<p>${t.count(items.length)}</p>` : ''}
         </div>
-        ${gridHTML(site, items, ctx)}
-      </section>`,
+        ${items.length ? gridHTML(site, items, ctx) : emptyHTML(site, t)}
+      </section>
+      ${aboutHTML(ctx, galleryLink(site, ctx))}`,
   });
 }
 
 /**
- * A workshop on the gallery's home page, from its site's items.json. `items` is empty when that
- * site isn't published yet.
- * @typedef {{ title: string, tagline: string, url: string, repoUrl: string, items: Item[] }} Workshop
+ * An author's avatar, or their initial when it couldn't be downloaded.
+ * @param {import('./authors.mjs').Author} author @param {Ctx} ctx @param {number} size
+ */
+const avatarHTML = (author, ctx, size) =>
+  author.avatar
+    ? `<img class="avatar" src="${ctx.root}${escapeHTML(author.avatar)}" alt="" width="${size}" height="${size}" loading="lazy" />`
+    : `<span class="avatar avatar-initial" aria-hidden="true" style="width: ${size}px; height: ${size}px">${escapeHTML(author.login.charAt(0).toUpperCase())}</span>`;
+
+/**
+ * The detail page's authors: up to five avatars, linking to the tool's authors page.
+ * @param {Item} item @param {Ctx} ctx
+ */
+function authorsHTML(item, ctx) {
+  const authors = item.authors ?? [];
+  if (!authors.length) return '';
+  const t = stringsOf(ctx.lang);
+  return `<div class="authors">
+              <h3>${t.authors}</h3>
+              <a class="authors-link" href="authors/">
+                <span class="avatar-stack">${authors.slice(0, 5).map((author) => avatarHTML(author, ctx, 32)).join('')}</span>
+                <span>${t.authorCount(authors.length)}</span>
+              </a>
+            </div>`;
+}
+
+/**
+ * A tool's authors page: the GitHub account behind every commit to it, most commits first.
+ * @param {Site} site @param {Item} item @param {Lang} [lang]
+ */
+export function renderAuthors(site, item, lang = defaultLanguage(site)) {
+  const t = stringsOf(lang);
+  const ctx = { lang, root: rootOf(site, lang, 3), home: '../../../' };
+  const lede = t.authorsLede(item.title);
+  return layout(site, ctx, {
+    title: `${t.authorsOf(item.title)} · ${siteTitle(site, lang)}`,
+    description: lede,
+    otherPath: `${pageHref(site, item)}authors/`,
+    body: `<article class="detail">
+        <header class="detail-head">
+          <a class="back" href="../">← ${escapeHTML(item.title)}</a>
+          <p class="kicker">${t.authors}</p>
+          <h1>${escapeHTML(t.authorsOf(item.title))}</h1>
+          <p class="lede">${escapeHTML(lede)}</p>
+        </header>
+        <ul class="author-list">${(item.authors ?? [])
+          .map(
+            (author) => `<li class="author">
+            ${avatarHTML(author, ctx, 56)}
+            <div>
+              <span class="author-github">${GITHUB_MARK}<a class="author-login" href="https://github.com/${encodeURIComponent(author.login)}" title="@${escapeHTML(author.login)}">@${escapeHTML(author.login)}</a></span>
+              <p>${t.commitCount(author.commits)}</p>
+            </div>
+          </li>`,
+          )
+          .join('')}</ul>
+      </article>`,
+  });
+}
+
+/**
+ * A workshop on the gallery's home page. `url` is its home page on this site, or undefined when the
+ * build couldn't find its checkout, in which case `items` is empty and the section links to its repo.
+ * @typedef {{ title: string, tagline: string, url?: string, repoUrl: string, items: Item[] }} GallerySection
  */
 
 /**
  * The gallery's home page: every workshop, each with its tools.
  * @param {Site} site
- * @param {Workshop[]} workshops
+ * @param {GallerySection[]} workshops
  * @param {Lang} [lang]
  */
 export function renderGallery(site, workshops, lang = defaultLanguage(site)) {
@@ -427,13 +586,13 @@ export function renderGallery(site, workshops, lang = defaultLanguage(site)) {
   const intro = siteText(site, lang, 'intro');
   const sections = workshops.map((workshop, index) => {
     const id = `workshop-${index}`;
-    const link = `<a class="button button-secondary" href="${escapeHTML(workshop.items.length ? workshop.url : workshop.repoUrl)}">${escapeHTML(words.visit(workshop.title))}</a>`;
+    const link = `<a class="button button-secondary" href="${escapeHTML(workshop.url ?? workshop.repoUrl)}">${escapeHTML(words.visit(workshop.title))}</a>`;
     return `<section aria-labelledby="${id}">
         <div class="section-head">
           <h2 id="${id}">${escapeHTML(workshop.title)}</h2>
           <p>${escapeHTML(workshop.tagline)}${workshop.items.length ? ` · ${words.tools(workshop.items.length)}` : ''}</p>
         </div>
-        ${workshop.items.length ? gridHTML(site, workshop.items, ctx) : `<p>${words.soon}</p>`}
+        ${workshop.items.length ? gridHTML(site, workshop.items, ctx) : `<div class="empty"><p>${words.soon}</p></div>`}
         <div class="actions">${link}</div>
       </section>`;
   });
@@ -445,13 +604,14 @@ export function renderGallery(site, workshops, lang = defaultLanguage(site)) {
         <h1 id="hero-title">${escapeHTML(siteTagline(site, lang))}</h1>
         ${intro ? `<p class="lede">${escapeHTML(intro)}</p>` : ''}
       </section>
-      ${sections.join('\n      ')}`,
+      ${sections.join('\n      ')}
+      ${aboutHTML(ctx, { href: 'https://github.com/tinwright', label: stringsOf(lang).onGitHub })}`,
   });
 }
 
 /** @param {Site} site @param {Item} item @param {Item[]} items @param {Lang} [lang] */
 export function renderDetail(site, item, items, lang = defaultLanguage(site)) {
-  const t = stringsOf(lang);
+  const t = stringsOf(lang, site);
   const ctx = { lang, root: rootOf(site, lang, 2), home: '../../' };
   const description = descriptionOf(site, item, lang);
   const facts = factsHTML(site, item, ctx);
@@ -481,6 +641,7 @@ export function renderDetail(site, item, items, lang = defaultLanguage(site)) {
             <h2>${t.atAGlance}</h2>
             ${facts ? `<dl>${facts}</dl>` : ''}
             ${extraDetailHTML(site, item, ctx)}
+            ${authorsHTML(item, ctx)}
             <div class="actions">
               <a class="button button-secondary" href="${escapeHTML(item.sourceUrl)}">${t.viewSource}</a>
             </div>
@@ -500,9 +661,16 @@ export function renderDetail(site, item, items, lang = defaultLanguage(site)) {
   });
 }
 
+/** The helpers each workshop's site.mjs hooks get. */
+const KIT = { escapeHTML, commandHTML, itemsPath };
+
+// GitHub's mark (Octicons mark-github, MIT), inline so a page never loads anything from GitHub.
+const GITHUB_MARK =
+  '<svg class="github-mark" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>';
+
 // Used when site/ has no favicons: an accent-coloured rounded square.
 const FAVICON = `data:image/svg+xml,${encodeURIComponent(
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#c8321f"/></svg>',
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#0d5e74"/></svg>',
 )}`;
 
 /**
@@ -565,7 +733,7 @@ function layout(site, { lang, root, home }, { title, description, image, otherPa
         <a class="wordmark" href="${home || './'}">${escapeHTML(siteTitle(site, lang))}${badge ? ` <span class="badge">${escapeHTML(badge)}</span>` : ''}</a>
         <nav class="masthead-links">
           ${others.map(({ strings, href }) => `<a class="masthead-link" href="${href}" hreflang="${strings.htmlLang}" lang="${strings.htmlLang}">${strings.name}</a>`).join('\n          ')}
-          <a class="masthead-link" href="${escapeHTML(site.repoUrl)}">GitHub</a>
+          <a class="masthead-link masthead-github" href="${escapeHTML(site.repoUrl)}" aria-label="GitHub" title="GitHub">${GITHUB_MARK}</a>
         </nav>
       </div>
     </header>
@@ -634,30 +802,30 @@ function layout(site, { lang, root, home }, { title, description, image, otherPa
 const STYLES = `
       :root {
         color-scheme: light dark;
-        --bg: #fffdf9;
-        --surface: #f6f1ea;
-        --text: #1d1b19;
-        --muted: #6b645c;
-        --rule: #e4ddd3;
-        --accent: #c8321f;
+        --bg: #f4f5f3;
+        --surface: #e9edec;
+        --text: #1b2428;
+        --muted: #56656b;
+        --rule: #d3dbdb;
+        --accent: #0d5e74;
         --accent-text: #ffffff;
-        --success: #1f7a4d;
-        --code-bg: #efe8de;
+        --success: #2b7347;
+        --code-bg: #e4e9e8;
         --serif: 'Iowan Old Style', Charter, 'Bitstream Charter', Georgia, 'Times New Roman', serif;
         --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
         --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
       }
       @media (prefers-color-scheme: dark) {
         :root {
-          --bg: #171513;
-          --surface: #221f1c;
-          --text: #f1ece5;
-          --muted: #a89f94;
-          --rule: #36312c;
-          --accent: #ef6a52;
-          --accent-text: #171513;
-          --success: #4cc38a;
-          --code-bg: #2b2723;
+          --bg: #11171a;
+          --surface: #1a2226;
+          --text: #e7ecea;
+          --muted: #98a6ab;
+          --rule: #2b363b;
+          --accent: #62bfd2;
+          --accent-text: #11171a;
+          --success: #5cc48a;
+          --code-bg: #212b2f;
         }
       }
       * { box-sizing: border-box; }
@@ -692,6 +860,10 @@ const STYLES = `
         text-decoration: none; color: var(--muted);
       }
       .masthead-link:hover { color: var(--accent); }
+      .masthead-github { display: inline-flex; align-self: center; }
+      .github-mark { width: 1.25rem; height: 1.25rem; display: block; }
+      .author-github { display: flex; align-items: center; gap: 6px; min-width: 0; }
+      .author-github .github-mark { width: 0.95rem; height: 0.95rem; flex: none; color: var(--muted); }
       main { flex: 1; padding-top: 40px; padding-bottom: 64px; }
       main > section + section, .detail + section { margin-top: 64px; }
 
@@ -706,6 +878,47 @@ const STYLES = `
         font: 700 clamp(2.2rem, 5.5vw, 3.6rem)/1.05 var(--serif); letter-spacing: -0.02em;
         margin: 0 0 16px;
       }
+
+      .authors { margin: 24px 0; }
+      .authors h3 { font: 600 1rem/1.4 var(--sans); margin: 0 0 8px; }
+      .authors-link {
+        display: inline-flex; align-items: center; gap: 10px; color: var(--muted); text-decoration: none;
+      }
+      .authors-link:hover { color: var(--accent); }
+      .avatar-stack { display: inline-flex; }
+      .avatar-stack .avatar { margin-left: -8px; box-shadow: 0 0 0 2px var(--surface); }
+      .avatar-stack .avatar:first-child { margin-left: 0; }
+      .avatar {
+        display: inline-block; flex: none; border-radius: 50%; object-fit: cover; background: var(--bg);
+      }
+      .avatar-initial {
+        display: inline-grid; place-items: center; font: 700 0.9rem/1 var(--serif); color: var(--muted);
+        border: 1.5px solid var(--rule);
+      }
+      .author-list {
+        list-style: none; padding: 0; margin: 32px 0 0; display: grid; gap: 16px;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+      }
+      .author {
+        display: flex; align-items: center; gap: 14px; padding: 14px 16px; border: 1px solid var(--rule);
+        border-radius: 12px;
+      }
+      .author > div { min-width: 0; }
+      .author p { margin: 2px 0 0; font-size: 0.85rem; color: var(--muted); }
+      .author-login {
+        display: block; font-weight: 600; text-decoration: none; white-space: nowrap; overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .author-login:hover { color: var(--accent); text-decoration: underline; }
+
+      .empty {
+        border: 1.5px dashed var(--rule); border-radius: 12px; background: var(--surface);
+        padding: 32px 24px; text-align: center; color: var(--muted);
+      }
+      .empty p { margin: 0 auto 16px; max-width: 46ch; }
+      .empty > :last-child { margin-bottom: 0; }
+      .empty-title { font: 700 1.35rem/1.3 var(--serif); color: var(--text); }
+      .empty .empty-title { margin-bottom: 8px; }
 
       .button {
         display: inline-block; background: var(--accent); color: var(--accent-text);
@@ -788,7 +1001,13 @@ const STYLES = `
       .card-title a { text-decoration: none; }
       .card-title a:hover { text-decoration: underline; }
       .card-text { margin: 0; font-size: 0.95rem; color: var(--muted); flex: 1; }
-      .byline { margin: 0; font-size: 0.8rem; color: var(--muted); }
+      .byline {
+        display: flex; align-items: center; gap: 8px; margin-top: 6px; min-width: 0;
+        font-size: 0.8rem; color: var(--muted); text-decoration: none;
+      }
+      .byline span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .byline .avatar-initial { font-size: 0.65rem; border-width: 1px; }
+      .byline:hover { color: var(--accent); }
 
       .detail-head { max-width: 760px; }
       .back {
@@ -828,6 +1047,8 @@ const STYLES = `
       .facts .copy-small { background: var(--surface); }
       .chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
       .chips code { font-size: 0.78rem; background: var(--bg); }
+      .about > p { max-width: 68ch; margin: 0 0 16px; color: var(--muted); }
+      .about .actions, .grid + .actions, .empty + .actions { margin-top: 24px; }
       .actions { display: flex; flex-wrap: wrap; gap: 8px 14px; }
       .detail-head .actions { align-items: center; margin-bottom: 40px; }
       .hint { margin: 0; font-size: 0.85rem; color: var(--muted); }

@@ -1,15 +1,21 @@
 # tinwright.github.io
 
-The org-wide gallery. It holds no tools: `scripts/build-gallery.mjs` reads each workshop's
-published `items.json` (listed in `site.config.js` `workshops`) and renders one home page per
-language with `renderGallery` in `scripts/page.js`. Cards link to each tool's page on its own
-workshop site, in the same language.
+The whole tinwright site. It holds no tools: `scripts/build-site.mjs` builds the gallery's home
+page (`renderGallery`) and, under `<repo>/`, every workshop's home page, tool pages and authors
+pages, from a checkout of each workshop listed in `site.config.js` `workshops`. One
+`scripts/page.js` renders all of it.
 
-- A workshop that hasn't published a site yet is shown with a link to its repository, never a
-  failed build.
-- Keep `scripts/page.js` in step with the workshops' copies when their shell changes (styles,
-  layout, strings), so every site looks like a sibling.
-- `npm test` builds from `test/fixtures/<repo>/items.json`; refresh a fixture by copying a
-  workshop's `dist/items.json` after `npm run build` there.
-- Deployed by `.github/workflows/pages.yml` on push and daily. This repository must be public for
-  GitHub Pages to serve it at https://tinwright.github.io.
+- **Where the workshops come from** (`scripts/workshops.mjs`): `$WORKSHOPS_DIR`, else `.workshops/`
+  (`npm run workshops` clones them there, as CI does), else the folders next to this repo.
+- **What a workshop supplies:** its `site.config.js` (title, tagline, translations, `items`
+  overrides, `hidden`), `scripts/items.mjs` `readItems`, `scripts/site.mjs` (its nouns and the
+  `kicker`, `card`, `facts` and `install` hooks, which get `kit`: `escapeHTML`, `commandHTML`,
+  `itemsPath`), and `scripts/rules.mjs` `beforeBuild` and `afterBuild`. Its tool-specific
+  rendering belongs in its `site.mjs`, never in `page.js` here.
+- A workshop without a checkout is listed with a link to its repository, never a failed build;
+  the site test fails instead, so CI notices.
+- `npm test` builds the real site and checks every page and link. Run it after changing a
+  workshop's `site.mjs`, `items.mjs` or `rules.mjs` too.
+- Deployed by `.github/workflows/pages.yml` on push, hourly and by hand. GitHub Pages needs this
+  repo and the workshops to be public, and the workshops must not publish Pages of their own:
+  their paths here (`/ai-apprentice/`...) would be taken by them.
